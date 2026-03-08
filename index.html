@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0c0d14">
+<title>My Timetable</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0d14;
+    --surface: #13151f;
+    --surface2: #1a1d2e;
+    --border: #252840;
+    --border2: #2d3148;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --accent: #7c3aed;
+    --accent2: #a78bfa;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding-bottom: 70px;
+  }
+
+  /* HEADER */
+  header {
+    padding: 12px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon { font-size: 1.3rem; }
+  .logo h1 { font-size: 1.1rem; font-weight: 700; color: var(--accent2); font-family: 'Space Mono', monospace; }
+  .logo .sub { font-size: 0.65rem; color: var(--muted); }
+  .header-actions { display: flex; gap: 6px; align-items: center; }
+
+  #saveIndicator {
+    font-size: 0.65rem; font-family: 'Space Mono', monospace;
+    color: var(--muted); padding: 3px 8px;
+    background: var(--surface2); border-radius: 20px;
+    border: 1px solid var(--border2);
+    transition: color 0.3s, border-color 0.3s; white-space: nowrap;
+  }
+  #saveIndicator.saved { color: #4ade80; border-color: #166534; }
+  #saveIndicator.saving { color: var(--accent2); }
+
+  /* PAGE */
+  .page { display: flex; }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 260px; min-width: 260px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 18px 14px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .sidebar-section-title {
+    font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.15em;
+    color: var(--muted); font-family: 'Space Mono', monospace;
+  }
+  .cat-card { background: var(--surface2); border-radius: 10px; padding: 11px; border: 1px solid var(--border2); }
+  .cat-top { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+  .cat-swatch { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+  .cat-name-input {
+    background: transparent; border: none; color: var(--text);
+    font-size: 0.84rem; font-weight: 600; flex: 1; outline: none;
+    font-family: 'DM Sans', sans-serif; min-width: 0;
+  }
+  .cat-name-input:focus { color: var(--accent2); }
+  .cat-hours { font-size: 0.67rem; color: var(--muted); background: var(--bg); border-radius: 5px; padding: 2px 6px; font-family: 'Space Mono', monospace; white-space: nowrap; }
+  .cat-bottom { display: flex; align-items: center; gap: 8px; }
+  .cat-bottom label { font-size: 0.67rem; color: var(--muted); }
+  input[type=color] { width: 30px; height: 28px; border: none; border-radius: 5px; cursor: pointer; padding: 1px; background: none; }
+  .cat-del { margin-left: auto; background: #2a1010; border: 1px solid #5a1a1a; border-radius: 5px; color: #f87171; font-size: 0.67rem; padding: 4px 10px; cursor: pointer; min-height: 30px; }
+
+  .add-cat-btn {
+    background: transparent; border: 1px dashed var(--border2);
+    border-radius: 8px; color: var(--muted); font-size: 0.78rem;
+    padding: 10px; cursor: pointer; font-family: 'DM Sans', sans-serif;
+    width: 100%; min-height: 42px;
+  }
+
+  .total-block { padding-top: 12px; border-top: 1px solid var(--border); }
+  .total-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); font-family: 'Space Mono', monospace; }
+  .total-value { font-size: 1.9rem; font-weight: 700; color: var(--accent2); font-family: 'Space Mono', monospace; margin-top: 4px; }
+  .total-sub { font-size: 0.68rem; color: var(--muted); }
+
+  /* MAIN */
+  .main { flex: 1; padding: 18px 16px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+  .table-header { display: flex; align-items: center; justify-content: space-between; }
+  .table-header span { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); font-family: 'Space Mono', monospace; }
+
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    padding: 9px 10px; font-size: 0.63rem; text-transform: uppercase;
+    letter-spacing: 0.1em; color: var(--muted); background: var(--bg);
+    border-bottom: 1px solid var(--border); text-align: left;
+    font-family: 'Space Mono', monospace;
+  }
+  tbody tr { border-bottom: 1px solid var(--border); }
+  tbody tr:last-child { border-bottom: none; }
+  td { padding: 8px 10px; vertical-align: middle; }
+
+  .time-input {
+    background: var(--bg); border: 1px solid var(--border2);
+    border-radius: 6px; color: #94a3b8;
+    font-family: 'Space Mono', monospace; font-size: 0.75rem;
+    padding: 5px 6px; width: 90px; outline: none; min-height: 36px;
+  }
+  .time-input:focus { border-color: var(--accent); color: var(--accent2); }
+
+  .act-wrap { display: flex; align-items: center; gap: 8px; }
+  .act-bar { width: 3px; height: 24px; border-radius: 3px; flex-shrink: 0; }
+  .act-input {
+    background: transparent; border: none; color: var(--text);
+    font-size: 0.84rem; flex: 1; outline: none; padding: 4px 0;
+    font-family: 'DM Sans', sans-serif; min-width: 0; min-height: 34px;
+  }
+  .act-input:focus { border-bottom: 1px solid var(--accent); }
+  .dur-badge { font-size: 0.65rem; color: var(--muted); background: var(--bg); border-radius: 5px; padding: 2px 6px; white-space: nowrap; font-family: 'Space Mono', monospace; }
+
+  .cat-select {
+    background: var(--bg); border: 1px solid var(--border2);
+    border-radius: 6px; color: var(--text); font-size: 0.74rem;
+    padding: 5px 7px; cursor: pointer; outline: none;
+    font-family: 'DM Sans', sans-serif; max-width: 150px;
+    min-height: 36px; appearance: none; -webkit-appearance: none;
+  }
+
+  .row-actions { display: flex; gap: 4px; align-items: center; }
+
+  .add-row-btn {
+    width: 100%; padding: 12px; background: var(--bg);
+    border: none; color: var(--muted); font-size: 0.8rem;
+    cursor: pointer; display: flex; align-items: center;
+    justify-content: center; gap: 6px;
+    font-family: 'DM Sans', sans-serif; min-height: 46px;
+  }
+
+  /* SUMMARY */
+  .summary { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .summary-title { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin-bottom: 10px; font-family: 'Space Mono', monospace; }
+  .summary-pills { display: flex; flex-wrap: wrap; gap: 7px; }
+  .s-pill { display: flex; align-items: center; gap: 6px; background: var(--bg); border: 1px solid var(--border2); border-radius: 8px; padding: 6px 10px; }
+  .s-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .s-name { font-size: 0.78rem; color: #cbd5e1; }
+  .s-hrs { font-size: 0.78rem; font-weight: 700; color: var(--accent2); margin-left: 2px; font-family: 'Space Mono', monospace; }
+
+  /* BUTTONS */
+  .btn { padding: 7px 13px; border-radius: 7px; border: none; cursor: pointer; font-size: 0.76rem; font-weight: 600; font-family: 'DM Sans', sans-serif; min-height: 36px; touch-action: manipulation; }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-ghost { background: var(--surface2); color: #94a3b8; border: 1px solid var(--border2); }
+  .btn-danger { background: #2a1010; color: #f87171; border: 1px solid #5a1a1a; }
+  .btn-sm { padding: 4px 8px; font-size: 0.68rem; min-height: 30px; }
+  .btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* MOBILE BOTTOM NAV */
+  .mobile-nav {
+    display: none;
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--surface); border-top: 1px solid var(--border);
+    padding: 6px 0 calc(6px + env(safe-area-inset-bottom, 0px));
+    z-index: 200; justify-content: space-around;
+  }
+  .nav-btn {
+    background: none; border: none; color: var(--muted);
+    font-size: 0.62rem; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 4px 10px; min-width: 56px;
+    font-family: 'DM Sans', sans-serif; touch-action: manipulation;
+  }
+  .nav-btn .ni { font-size: 1.25rem; line-height: 1; }
+  .nav-btn.active { color: var(--accent2); }
+
+  /* OVERLAY */
+  .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 150; }
+  .sidebar-overlay.visible { display: block; }
+
+  /* ===== MOBILE ===== */
+  @media (max-width: 680px) {
+    body { padding-bottom: 72px; }
+    .mobile-nav { display: flex; }
+    #saveIndicator { display: none; }
+
+    /* Sidebar = fixed drawer */
+    .sidebar {
+      position: fixed;
+      left: 0; top: 0; bottom: 0;
+      z-index: 160;
+      width: 290px; min-width: 0;
+      overflow-y: auto;
+      transform: translateX(-100%);
+      transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+      padding-top: calc(18px + env(safe-area-inset-top, 0px));
+    }
+    .sidebar.open { transform: translateX(0); }
+
+    .main { padding: 12px 10px; }
+
+    /* Hide category column */
+    thead th:nth-child(4), td:nth-child(4) { display: none; }
+    .dur-badge { display: none; }
+    .time-input { width: 80px; }
+    td { padding: 7px 6px; }
+  }
+
+  @media (max-width: 380px) {
+    thead th:nth-child(2), td:nth-child(2) { display: none; }
+    .time-input { width: 72px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">📅</div>
+    <div>
+      <h1>TIMETABLE</h1>
+      <div class="sub">Tap any field to edit</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <span id="saveIndicator">● saved</span>
+    <button class="btn btn-primary" onclick="addRow()">+ Add</button>
+  </div>
+</header>
+
+<div class="sidebar-overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<div class="page">
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-section-title">Categories</div>
+    <div id="catList" style="display:flex;flex-direction:column;gap:9px;"></div>
+    <button class="add-cat-btn" onclick="addCategory()">+ Add Category</button>
+    <div class="total-block">
+      <div class="total-label">Scheduled</div>
+      <div class="total-value" id="totalVal">0h</div>
+      <div class="total-sub">of 24 hours</div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="table-header">
+      <span>Schedule Blocks</span>
+      <button class="btn btn-ghost" onclick="exportCSV()" style="font-size:0.7rem;padding:4px 10px;min-height:30px;">⬇ Export</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Start</th>
+            <th>End</th>
+            <th>Activity</th>
+            <th>Category</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <button class="add-row-btn" onclick="addRow()">＋ Add time block</button>
+    </div>
+
+    <div class="summary">
+      <div class="summary-title">⏱ Hours by Category</div>
+      <div class="summary-pills" id="summaryPills"></div>
+    </div>
+  </div>
+</div>
+
+<div class="mobile-nav">
+  <button class="nav-btn active" id="navSchedule" onclick="closeSidebar()">
+    <span class="ni">📋</span>Schedule
+  </button>
+  <button class="nav-btn" onclick="addRow()">
+    <span class="ni">＋</span>Add Block
+  </button>
+  <button class="nav-btn" id="navCats" onclick="toggleSidebar()">
+    <span class="ni">🏷️</span>Categories
+  </button>
+  <button class="nav-btn" onclick="exportCSV()">
+    <span class="ni">⬇</span>Export
+  </button>
+</div>
+
+<script>
+const DEFAULT_CATS = [
+  { id: 'sleep',    name: 'Sleep',                  color: '#3b82f6' },
+  { id: 'school',   name: 'School / Prep / Travel', color: '#22c55e' },
+  { id: 'godot',    name: 'Godot / Game Dev',        color: '#a855f7' },
+  { id: 'learning', name: 'Learning (Math/Bahasa)',  color: '#eab308' },
+  { id: 'iqra',     name: 'Iqra',                   color: '#f97316' },
+  { id: 'gaming',   name: 'Gaming',                 color: '#ef4444' },
+];
+const DEFAULT_ROWS = [
+  { start: '00:00', end: '05:00', activity: 'Sleep',                       cat: 'sleep'    },
+  { start: '05:00', end: '05:30', activity: 'School Prep',                 cat: 'school'   },
+  { start: '05:30', end: '11:30', activity: 'School',                      cat: 'school'   },
+  { start: '11:30', end: '12:00', activity: 'Travel home',                 cat: 'school'   },
+  { start: '12:00', end: '12:15', activity: 'Shower',                      cat: 'school'   },
+  { start: '12:15', end: '13:00', activity: 'Free / Lunch / Relax',        cat: 'school'   },
+  { start: '13:00', end: '14:00', activity: 'Nap (Biphasic Sleep)',         cat: 'sleep'    },
+  { start: '14:00', end: '19:30', activity: 'Godot / Game Dev / Grinding', cat: 'godot'    },
+  { start: '19:30', end: '20:00', activity: 'Learning (Math / Bahasa)',     cat: 'learning' },
+  { start: '20:00', end: '20:30', activity: 'Iqra (read, recite, repeat)',  cat: 'iqra'     },
+  { start: '20:30', end: '21:00', activity: 'Gaming (fun / leisure)',       cat: 'gaming'   },
+  { start: '21:00', end: '21:30', activity: 'Learning (Math / Bahasa)',     cat: 'learning' },
+  { start: '21:30', end: '00:00', activity: 'Gaming (fun / leisure)',       cat: 'gaming'   },
+];
+
+let cats, rows;
+function uid() { return Math.random().toString(36).slice(2, 9); }
+
+function loadData() {
+  try {
+    const saved = localStorage.getItem('timetable_v2');
+    if (saved) {
+      const d = JSON.parse(saved);
+      cats = d.cats || DEFAULT_CATS;
+      rows = (d.rows || DEFAULT_ROWS).map(r => ({ ...r, id: r.id || uid() }));
+    } else {
+      cats = DEFAULT_CATS;
+      rows = DEFAULT_ROWS.map(r => ({ ...r, id: uid() }));
+    }
+  } catch(e) {
+    cats = DEFAULT_CATS;
+    rows = DEFAULT_ROWS.map(r => ({ ...r, id: uid() }));
+  }
+}
+
+let saveTimer = null;
+function saveData() {
+  const ind = document.getElementById('saveIndicator');
+  if (ind) { ind.textContent = '● saving…'; ind.className = 'saving'; }
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try {
+      localStorage.setItem('timetable_v2', JSON.stringify({ cats, rows }));
+      if (ind) { ind.textContent = '● saved'; ind.className = 'saved'; }
+      setTimeout(() => { if (ind) ind.className = ''; }, 2000);
+    } catch(e) {
+      if (ind) { ind.textContent = '⚠ full'; ind.className = ''; }
+    }
+  }, 600);
+}
+
+function getCat(id) { return cats.find(c => c.id === id) || { name: '—', color: '#475569' }; }
+function toMins(t) { if (!t) return 0; const [h,m] = t.split(':').map(Number); return h*60+m; }
+function dur(s, e) { let a=toMins(s), b=toMins(e); if(b<=a) b+=1440; return b-a; }
+function fmtMins(m) { const h=Math.floor(m/60), mm=m%60; return mm?`${h}h ${mm}m`:`${h}h`; }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function renderCats() {
+  const list = document.getElementById('catList');
+  list.innerHTML = '';
+  cats.forEach(cat => {
+    const mins = rows.filter(r => r.cat === cat.id).reduce((a,r) => a + dur(r.start,r.end), 0);
+    const d = document.createElement('div');
+    d.className = 'cat-card';
+    d.innerHTML = `
+      <div class="cat-top">
+        <div class="cat-swatch" style="background:${cat.color}"></div>
+        <input class="cat-name-input" value="${esc(cat.name)}" onchange="renamecat('${cat.id}',this.value)" />
+        <span class="cat-hours">${fmtMins(mins)}</span>
+      </div>
+      <div class="cat-bottom">
+        <label>Color</label>
+        <input type="color" value="${cat.color}" oninput="recolor('${cat.id}',this.value)" />
+        <button class="cat-del" onclick="deleteCat('${cat.id}')">✕ Delete</button>
+      </div>`;
+    list.appendChild(d);
+  });
+}
+
+function renderRows() {
+  const tb = document.getElementById('tbody');
+  tb.innerHTML = '';
+  rows.forEach((row, i) => {
+    const cat = getCat(row.cat);
+    const d = dur(row.start, row.end);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input class="time-input" type="time" value="${row.start}" onchange="upd('${row.id}','start',this.value)" /></td>
+      <td><input class="time-input" type="time" value="${row.end}" onchange="upd('${row.id}','end',this.value)" /></td>
+      <td>
+        <div class="act-wrap">
+          <div class="act-bar" style="background:${cat.color}"></div>
+          <input class="act-input" value="${esc(row.activity)}" onchange="upd('${row.id}','activity',this.value)" placeholder="Activity…" />
+          <span class="dur-badge">${fmtMins(d)}</span>
+        </div>
+      </td>
+      <td>
+        <select class="cat-select" onchange="upd('${row.id}','cat',this.value)">
+          ${cats.map(c=>`<option value="${c.id}"${c.id===row.cat?' selected':''}>${esc(c.name)}</option>`).join('')}
+        </select>
+      </td>
+      <td>
+        <div class="row-actions">
+          <button class="btn btn-ghost btn-sm" onclick="move('${row.id}',-1)" ${i===0?'disabled':''}>↑</button>
+          <button class="btn btn-ghost btn-sm" onclick="move('${row.id}',1)" ${i===rows.length-1?'disabled':''}>↓</button>
+          <button class="btn btn-danger btn-sm" onclick="del('${row.id}')">✕</button>
+        </div>
+      </td>`;
+    tb.appendChild(tr);
+  });
+}
+
+function renderSummary() {
+  const pills = document.getElementById('summaryPills');
+  pills.innerHTML = '';
+  let total = 0;
+  cats.forEach(cat => {
+    const mins = rows.filter(r => r.cat === cat.id).reduce((a,r) => a + dur(r.start,r.end), 0);
+    if (!mins) return;
+    total += mins;
+    pills.innerHTML += `<div class="s-pill"><div class="s-dot" style="background:${cat.color}"></div><span class="s-name">${esc(cat.name)}</span><span class="s-hrs">${fmtMins(mins)}</span></div>`;
+  });
+  document.getElementById('totalVal').textContent = fmtMins(total);
+}
+
+function render() { renderCats(); renderRows(); renderSummary(); }
+
+function upd(id, field, val) { const r=rows.find(r=>r.id===id); if(r){r[field]=val; render(); saveData();} }
+function move(id, dir) {
+  const i=rows.findIndex(r=>r.id===id), j=i+dir;
+  if(j<0||j>=rows.length) return;
+  [rows[i],rows[j]]=[rows[j],rows[i]]; render(); saveData();
+}
+function del(id) { rows=rows.filter(r=>r.id!==id); render(); saveData(); }
+function addRow() {
+  const last=rows[rows.length-1];
+  rows.push({id:uid(), start:last?last.end:'00:00', end:last?last.end:'01:00', activity:'New Activity', cat:cats[0]?.id||''});
+  render(); saveData();
+  setTimeout(()=>document.getElementById('tbody').lastElementChild?.scrollIntoView({behavior:'smooth',block:'nearest'}),100);
+}
+function addCategory() {
+  cats.push({id:uid(), name:'New Category', color:'#'+Math.floor(Math.random()*0xffffff).toString(16).padStart(6,'0')});
+  render(); saveData();
+}
+function renamecat(id, val) { const c=cats.find(c=>c.id===id); if(c){c.name=val; render(); saveData();} }
+function recolor(id, val) { const c=cats.find(c=>c.id===id); if(c){c.color=val; render(); saveData();} }
+function deleteCat(id) {
+  if(!confirm('Delete this category?')) return;
+  cats=cats.filter(c=>c.id!==id);
+  rows.forEach(r=>{ if(r.cat===id) r.cat=cats[0]?.id||''; });
+  render(); saveData();
+}
+function exportCSV() {
+  const lines=['Start,End,Activity,Category,Duration'];
+  rows.forEach(r=>{ const c=getCat(r.cat); lines.push(`${r.start},${r.end},"${r.activity}","${c.name}",${fmtMins(dur(r.start,r.end))}`); });
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/csv'}));
+  a.download='timetable.csv'; a.click();
+}
+
+function toggleSidebar() {
+  const sb=document.getElementById('sidebar'), ov=document.getElementById('overlay');
+  const open=sb.classList.toggle('open');
+  ov.classList.toggle('visible',open);
+  document.getElementById('navCats').classList.toggle('active',open);
+  document.getElementById('navSchedule').classList.toggle('active',!open);
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('visible');
+  document.getElementById('navCats').classList.remove('active');
+  document.getElementById('navSchedule').classList.add('active');
+}
+
+loadData();
+render();
+</script>
+</body>
+</html>
