@@ -188,6 +188,45 @@
   .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 150; }
   .sidebar-overlay.visible { display: block; }
 
+  /* CATEGORY BOTTOM SHEET */
+  .cat-sheet {
+    display: none;
+    position: fixed; left: 0; right: 0; bottom: 0;
+    z-index: 300;
+    background: var(--surface);
+    border-top: 1px solid var(--border2);
+    border-radius: 18px 18px 0 0;
+    padding: 0 0 calc(16px + env(safe-area-inset-bottom, 0px));
+    transform: translateY(100%);
+    transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+  }
+  .cat-sheet.open { display: block; transform: translateY(0); }
+  .cat-sheet-handle {
+    width: 36px; height: 4px; background: var(--border2);
+    border-radius: 4px; margin: 10px auto 4px;
+  }
+  .cat-sheet-title {
+    font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.15em;
+    color: var(--muted); font-family: 'Space Mono', monospace;
+    padding: 8px 16px 12px;
+  }
+  .cat-sheet-list { display: flex; flex-direction: column; }
+  .cat-sheet-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 13px 16px; cursor: pointer; border: none;
+    background: none; color: var(--text); font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem; text-align: left; width: 100%;
+    border-bottom: 1px solid var(--border);
+    touch-action: manipulation;
+  }
+  .cat-sheet-item:last-child { border-bottom: none; }
+  .cat-sheet-item:active { background: var(--surface2); }
+  .cat-sheet-item.selected { color: var(--accent2); }
+  .cat-sheet-item.selected::after { content: '✓'; margin-left: auto; color: var(--accent2); }
+  .cat-sheet-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .sheet-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 290; }
+  .sheet-overlay.visible { display: block; }
+
   /* ===== MOBILE ===== */
   @media (max-width: 680px) {
     body { padding-bottom: 72px; }
@@ -212,13 +251,24 @@
     /* Hide category column */
     thead th:nth-child(4), td:nth-child(4) { display: none; }
     .dur-badge { display: none; }
-    .time-input { width: 80px; }
-    td { padding: 7px 6px; }
+
+    /* Time columns as narrow as possible, activity gets remaining space */
+    td:nth-child(1), td:nth-child(2) { width: 1px; white-space: nowrap; padding: 5px 2px 5px 6px; }
+    td:nth-child(3) { padding: 5px 4px; }
+    td:nth-child(5) { width: 1px; white-space: nowrap; padding: 5px 6px 5px 2px; }
+
+    .time-input {
+      width: 62px; font-size: 0.67rem; padding: 4px 3px;
+      appearance: none; -webkit-appearance: none;
+    }
+    .time-input::-webkit-calendar-picker-indicator { display: none; }
+    .act-input { font-size: 0.8rem; }
+    .btn-sm { padding: 3px 5px; min-height: 26px; font-size: 0.62rem; }
+    .row-actions { gap: 2px; }
   }
 
-  @media (max-width: 380px) {
-    thead th:nth-child(2), td:nth-child(2) { display: none; }
-    .time-input { width: 72px; }
+  @media (max-width: 360px) {
+    .time-input { width: 54px; font-size: 0.62rem; }
   }
 </style>
 </head>
@@ -229,7 +279,7 @@
     <div class="logo-icon">📅</div>
     <div>
       <h1>TIMETABLE</h1>
-      <div class="sub">Tap any field to edit</div>
+      <div class="sub">Tap color bar to change category</div>
     </div>
   </div>
   <div class="header-actions">
@@ -239,6 +289,14 @@
 </header>
 
 <div class="sidebar-overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<!-- Category Bottom Sheet (mobile) -->
+<div class="sheet-overlay" id="sheetOverlay" onclick="closeSheet()"></div>
+<div class="cat-sheet" id="catSheet">
+  <div class="cat-sheet-handle"></div>
+  <div class="cat-sheet-title">Change Category</div>
+  <div class="cat-sheet-list" id="catSheetList"></div>
+</div>
 
 <div class="page">
   <div class="sidebar" id="sidebar">
@@ -396,7 +454,7 @@ function renderRows() {
       <td><input class="time-input" type="time" value="${row.end}" onchange="upd('${row.id}','end',this.value)" /></td>
       <td>
         <div class="act-wrap">
-          <div class="act-bar" style="background:${cat.color}"></div>
+          <div class="act-bar" style="background:${cat.color};cursor:pointer;width:6px;height:28px;border-radius:4px;" onclick="openSheet('${row.id}')" title="Change category"></div>
           <input class="act-input" value="${esc(row.activity)}" onchange="upd('${row.id}','activity',this.value)" placeholder="Activity…" />
           <span class="dur-badge">${fmtMins(d)}</span>
         </div>
@@ -463,6 +521,28 @@ function exportCSV() {
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/csv'}));
   a.download='timetable.csv'; a.click();
+}
+
+let sheetRowId = null;
+function openSheet(rowId) {
+  sheetRowId = rowId;
+  const row = rows.find(r => r.id === rowId);
+  const list = document.getElementById('catSheetList');
+  list.innerHTML = '';
+  cats.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'cat-sheet-item' + (cat.id === row.cat ? ' selected' : '');
+    btn.innerHTML = `<div class="cat-sheet-dot" style="background:${cat.color}"></div>${esc(cat.name)}`;
+    btn.onclick = () => { upd(rowId, 'cat', cat.id); closeSheet(); };
+    list.appendChild(btn);
+  });
+  document.getElementById('catSheet').classList.add('open');
+  document.getElementById('sheetOverlay').classList.add('visible');
+}
+function closeSheet() {
+  document.getElementById('catSheet').classList.remove('open');
+  document.getElementById('sheetOverlay').classList.remove('visible');
+  sheetRowId = null;
 }
 
 function toggleSidebar() {
